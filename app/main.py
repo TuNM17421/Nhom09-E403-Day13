@@ -140,4 +140,3 @@ async def disable_incident(name: str) -> JSONResponse:
         return JSONResponse({"ok": True, "incidents": status()})
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
- 
