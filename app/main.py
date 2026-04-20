@@ -15,10 +15,15 @@ from .pii import hash_user_id, summarize_text
 from .schemas import ChatRequest, ChatResponse
 from .tracing import tracing_enabled
 
+# 1. Cấu hình Logging sớm nhất có thể
 configure_logging()
 log = get_logger()
+
 app = FastAPI(title="Day 13 Observability Lab")
+
+# 2. Đăng ký Middleware để xử lý Correlation ID
 app.add_middleware(CorrelationIdMiddleware)
+
 agent = LabAgent()
 
 
@@ -44,6 +49,8 @@ async def metrics() -> dict:
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat(request: Request, body: ChatRequest) -> ChatResponse:
+    # 3. Bind contextvars để structlog tự động nhặt vào các log tiếp theo
+    # Lưu ý: correlation_id đã được bind bởi middleware
     bind_contextvars(
         user_id_hash=hash_user_id(body.user_id),
         session_id=body.session_id,
@@ -55,15 +62,21 @@ async def chat(request: Request, body: ChatRequest) -> ChatResponse:
     log.info(
         "request_received",
         service="api",
-        payload={"message_preview": summarize_text(body.message)},
+        payload={
+            "message_preview": summarize_text(body.message),
+            "feature": body.feature
+        },
     )
+    
     try:
+        # 4. Thực thi logic của Agent
         result = agent.run(
             user_id=body.user_id,
             feature=body.feature,
             session_id=body.session_id,
             message=body.message,
         )
+        
         log.info(
             "response_sent",
             service="api",
@@ -73,6 +86,7 @@ async def chat(request: Request, body: ChatRequest) -> ChatResponse:
             cost_usd=result.cost_usd,
             payload={"answer_preview": summarize_text(result.answer)},
         )
+        
         return ChatResponse(
             answer=result.answer,
             correlation_id=request.state.correlation_id,
@@ -82,6 +96,7 @@ async def chat(request: Request, body: ChatRequest) -> ChatResponse:
             cost_usd=result.cost_usd,
             quality_score=result.quality_score,
         )
+        
     except Exception as exc:  # pragma: no cover
         error_type = type(exc).__name__
         record_error(error_type)
@@ -89,7 +104,10 @@ async def chat(request: Request, body: ChatRequest) -> ChatResponse:
             "request_failed",
             service="api",
             error_type=error_type,
-            payload={"detail": str(exc), "message_preview": summarize_text(body.message)},
+            payload={
+                "detail": str(exc), 
+                "message_preview": summarize_text(body.message)
+            },
         )
         raise HTTPException(status_code=500, detail=error_type) from exc
 

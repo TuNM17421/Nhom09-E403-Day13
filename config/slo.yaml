@@ -1,16 +1,19 @@
 service: day13-observability-lab
-window: 28d
+window: 7d # Theo dõi theo tuần để phản ứng nhanh hơn
 slis:
   latency_p95_ms:
-    objective: 3000
-    target: 99.5
-    note: Replace with your group's target
-  error_rate_pct:
-    objective: 2
-    target: 99.0
-  daily_cost_usd:
-    objective: 2.5
-    target: 100.0
-  quality_score_avg:
-    objective: 0.75
+    objective: 2000 # 95% request phải < 2 giây
     target: 95.0
+    note: "Đảm bảo trải nghiệm người dùng không bị lag khi gọi LLM"
+  error_rate_pct:
+    objective: 1 # Tỷ lệ lỗi tối đa 1%
+    target: 99.0
+    note: "Độ tin cậy của API Gateway và Backend logic"
+  daily_cost_usd:
+    objective: 2.0 # Giới hạn 2 USD mỗi ngày cho toàn nhóm
+    target: 100.0
+    note: "Kiểm soát chi phí API (FinOps)"
+  quality_score_avg:
+    objective: 0.8 # Điểm chất lượng trung bình (0.0 - 1.0)
+    target: 90.0
+    note: "Đo lường độ chính xác của câu trả lời từ LLM"

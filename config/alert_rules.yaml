@@ -1,19 +1,25 @@
 alerts:
   - name: high_latency_p95
     severity: P2
-    condition: latency_p95_ms > 5000 for 30m
+    condition: latency_p95_ms > 2000 for 10m # Hạ xuống 2000ms theo SLO
     type: symptom-based
     owner: team-oncall
     runbook: docs/alerts.md#1-high-latency-p95
   - name: high_error_rate
     severity: P1
-    condition: error_rate_pct > 5 for 5m
+    condition: error_rate_pct > 1 for 2m # Hạ xuống 1% lỗi
     type: symptom-based
     owner: team-oncall
     runbook: docs/alerts.md#2-high-error-rate
   - name: cost_budget_spike
     severity: P2
-    condition: hourly_cost_usd > 2x_baseline for 15m
+    condition: hourly_cost_usd > 0.5 for 30m # 0.5 USD/giờ tương đương ~12 USD/ngày (cảnh báo sớm)
     type: symptom-based
     owner: finops-owner
     runbook: docs/alerts.md#3-cost-budget-spike
+  - name: low_quality_score
+    severity: P3
+    condition: quality_score_avg < 0.7 for 15m # Chất lượng AI giảm sút
+    type: symptom-based
+    owner: ai-expert
+    runbook: docs/alerts.md#4-low-quality-score
