@@ -12,10 +12,10 @@
 - [GROUP_NAME]: Group 9
 - [REPO_URL]: https://github.com/TuNM17421/Nhom09-E403-Day13
 - [MEMBERS]:
-  - Member A: [Name] Hoàng Sơn Lâm | Role: Backend & Security
-  - Member B: [Name] Lưu Linh Ly | Role: Tracing & Enrichment
-  - Member C: [Name] Lê Tuấn Đạt | Role: Reliability & Incidents
-  - Member D: [Name] Nguyễn Mạnh Tú | Role: UI & Integration Lead
+  - Member A: Hoàng Sơn Lâm | Role: Backend & Security
+  - Member B: Lưu Linh Ly | Role: Tracing & Enrichment
+  - Member C: Lê Tuấn Đạt | Role: Reliability & Incidents
+  - Member D: Nguyễn Mạnh Tú | Role: UI & Integration Lead
 
 ---
 
@@ -28,41 +28,39 @@
 
 ## 3. Technical Evidence (Group)
 
-> Add screenshots into a shared evidence folder and paste the relative paths below.
-
 ### 3.1 Logging & Tracing
 - [EVIDENCE_CORRELATION_ID_SCREENSHOT]: ![alt text](EVIDENCE_CORRELATION_ID_SCREENSHOT.PNG)
 - [EVIDENCE_PII_REDACTION_SCREENSHOT]: ![alt text](EVIDENCE_PII_REDACTION_SCREENSHOT.jpg)
 - [EVIDENCE_TRACE_LIST_SCREENSHOT]: ![alt text](EVIDENCE_TRACE_LIST_SCREENSHOT.jpg)
 - [EVIDENCE_TRACE_WATERFALL_SCREENSHOT]: ![alt text](EVIDENCE_TRACE_WATERFALL_SCREENSHOT.jpg)
-- [TRACE_WATERFALL_EXPLANATION]: This trace represents a healthy baseline request. The main run span completed in about 150 ms with stable token usage of 29 input tokens and 152 output tokens, showing that the system responded correctly without abnormal latency or failures. It serves as a useful reference point for comparison against incident scenarios such as rag_slow and cost_spike.
-- [LOGGING_SUMMARY]: Logs are emitted in JSON format, include correlation IDs, and contain contextual metadata for debugging.
+- [TRACE_WATERFALL_EXPLANATION]: Trace này đại diện cho một request tiêu chuẩn. Run span hoàn thành trong khoảng 150ms với việc sử dụng token ổn định (29 input, 152 output), cho thấy hệ thống phản hồi chính xác mà không gặp phải độ trễ bất thường nào. Nó đóng vai trò là điểm tham chiếu hữu ích để so sánh với các kịch bản sự cố như rag_slow.
+- [LOGGING_SUMMARY]: Các bản ghi log được phát hành dưới dạng JSON, bao gồm Correlation ID và chứa metadata theo ngữ cảnh để phục vụ việc chẩn đoán lỗi.
 
 ### 3.2 Dashboard & SLOs
 - [DASHBOARD_6_PANELS_SCREENSHOT]: ![alt text](DASHBOARD_6_PANELS_SCREENSHOT.jpg)
-- [DASHBOARD_NOTES]: Main 6 panels currently include Latency P50/P95/P99, Traffic QPS, Error Rate %, Cost $/hour, Tokens in/out, and Hallucination %.
+- [DASHBOARD_NOTES]: 6 bảng điều khiển chính hiện bao gồm: Latency P50/P95/P99, Traffic QPS, Error Rate %, Cost $/hour, Tokens in/out, và Hallucination %.
 - [SLO_TABLE]:
 | SLI | Target | Window | Current Value |
 |---|---:|---|---:|
-| Latency P95 | < 2000ms | 7d | 150ms |
+| Latency P95 | < 2000ms | 7d | ~315ms (Baseline) / ~2660ms (Incident) |
 | Error Rate | < 1% | 7d | 0% |
-| Cost Budget | < $2.0/day or < $0.5/hour | 1d | ~$0.017/day equivalent from current sample load |
+| Cost Budget | < $2.0/day | 1d | ~$0.017/day |
 | Quality Proxy | > 80% | 7d | 80% |
 
 ### 3.3 Alerts & Runbook
 - [ALERT_RULES_SCREENSHOT]: ![alt text](ALERT_RULES_SCREENSHOT.PNG)
 - [SAMPLE_RUNBOOK_LINK]: [docs/alerts.md](docs/alerts.md)
-- [ALERT_SUMMARY]: The team implemented 4 symptom-based alerts in [config/alert_rules.yaml](config/alert_rules.yaml): high_latency_p95, high_error_rate, cost_budget_spike, and low_quality_score. These alerts cover latency, reliability, spending, and AI answer quality. Each alert is mapped to a concrete runbook in [docs/alerts.md](docs/alerts.md), including severity, trigger condition, impact, first checks, and mitigation steps. The team uses the debug path Metrics -> Traces -> Logs to investigate any alert that fires.
+- [ALERT_SUMMARY]: Nhóm đã triển khai 4 cảnh báo dựa trên triệu chứng (symptom-based) trong [config/alert_rules.yaml](config/alert_rules.yaml): high_latency_p95, high_error_rate, cost_budget_spike, và low_quality_score. Mỗi cảnh báo được ánh xạ tới một runbook cụ thể trong [docs/alerts.md](docs/alerts.md), bao gồm mức độ nghiêm trọng, điều kiện kích hoạt, tác động, các bước kiểm tra đầu tiên và biện pháp giảm thiểu.
 
 ---
 
 ## 4. Incident Response (Group)
-- [SCENARIO_NAME]: rag_slow, tool_fail, cost_spike
-- [SYMPTOMS_OBSERVED]: Three representative incidents were tested. For rag_slow, the API still returned a valid answer but latency increased sharply to 2650 ms with correlation_id req-482509ba, indicating severe slowdown in the retrieval path. For tool_fail, the API returned an error payload with detail RuntimeError, proving a reliability failure in the internal execution path. For cost_spike, the request succeeded but tokens_out rose to 464 and cost_usd reached 0.007053 with correlation_id req-e6dc606d, indicating abnormal cost growth despite normal latency.
-- [ROOT_CAUSE_PROVED_BY]: Root cause was proved using a combination of response payloads, metrics, traces, and logs. The rag_slow scenario was confirmed by high latency evidence tied to correlation_id req-482509ba. The tool_fail scenario was proved by the RuntimeError response and corresponding error logs. The cost_spike scenario was proved by unusually high output token count and increased cost in the response payload and metrics.
-- [DEBUG_PATH]: Metrics -> Traces -> Logs
-- [FIX_ACTION]: The team followed the observability workflow by first detecting abnormal metrics, then checking the related traces, and finally confirming the details in structured logs. For rag_slow, the team identified the slow retrieval path and disabled or mitigated the injected latency scenario. For tool_fail, the team isolated the failing internal path and restored normal handling. For cost_spike, the team verified excessive token generation and tuned the path to reduce unnecessary output cost.
-- [PREVENTIVE_MEASURE]: The team added alert thresholds for latency, error rate, cost spike, and low quality score. Preventive actions include lowering retrieval load, adding retry and fallback handling for tool failures, setting stronger token and cost limits, and continuously monitoring quality and cost through the dashboard and Langfuse traces.
+- [SCENARIO_NAME]: rag_slow
+- [SYMPTOMS_OBSERVED]: Sau khi kích hoạt sự cố `rag_slow`, độ trễ P95 tăng vọt từ ~315ms lên mức trung bình ~2660ms (vượt ngưỡng SLO 2000ms). Người dùng sẽ cảm thấy ứng dụng phản hồi rất chậm.
+- [ROOT_CAUSE_PROVED_BY]: Sự cố được xác nhận thông qua Correlation ID `req-dab0459e`. Khi kiểm tra Trace Waterfall trên Langfuse, span `retrieve` (RAG) chiếm tới ~2500ms, trong khi các bước khác vẫn ổn định. Điều này chứng minh nút thắt cổ chai nằm ở tầng truy xuất dữ liệu.
+- [DEBUG_PATH]: Metrics (Dashboard) -> Traces (Langfuse Waterfall) -> Logs (JSONL with Correlation ID)
+- [FIX_ACTION]: Vô hiệu hóa kịch bản sự cố và kiểm tra lại hệ thống RAG để đảm bảo không có độ trễ giả lập.
+- [PREVENTIVE_MEASURE]: Thiết lập **Timeout** (ví dụ: 1000ms) cho các cuộc gọi RAG và bổ sung cơ chế phản hồi dự phòng (fallback) để đảm bảo UX khi RAG gặp sự cố.
 
 ---
 
@@ -70,30 +68,29 @@
 
 ### Hoàng Sơn Lâm
 - [ROLE]: Backend & Security
-- [TASKS_COMPLETED]: Correlation ID propagation, structured logging, log schema verification
+- [TASKS_COMPLETED]: Triển khai Correlation ID propagation, Structured Logging và bộ lọc PII đệ quy (Recursive Scrubbing).
 - [EVIDENCE_LINK]: ![alt text](SonLam_commit.PNG)
-
-### Lê Tuấn Đạt
-- [ROLE]: Tracing & Enrichment
-- [TASKS_COMPLETED]: Trace instrumentation, metadata tagging, context enrichment
-- [EVIDENCE_LINK]: ![alt text](TuanDat_commit.PNG)
 
 ### Lưu Linh Ly
 - [ROLE]: Reliability & Incidents
-- [TASKS_COMPLETED]: SLO definitions, alert rules, incident analysis and mitigation
+- [TASKS_COMPLETED]: Định nghĩa SLO, cấu hình Alert Rules và phân tích/khắc phục sự cố (Incident Analysis).
 - [EVIDENCE_LINK]: ![alt text](LinhLy_commit.PNG)
+
+### Lê Tuấn Đạt
+- [ROLE]: Tracing & Enrichment
+- [TASKS_COMPLETED]: Tích hợp Langfuse Tracing, gắn metadata tagging và enrichment context cho Agent.
+- [EVIDENCE_LINK]: ![alt text](TuanDat_commit.PNG)
 
 ### Nguyễn Mạnh Tú
 - [ROLE]: UI & Integration Lead
-- [TASKS_COMPLETED]: Dashboard design, evidence collection, report assembly, demo flow
+- [TASKS_COMPLETED]: Thiết kế Dashboard 6 panels, thu thập bằng chứng và tổng hợp báo cáo Blueprint cuối cùng.
 - [EVIDENCE_LINK]: ![alt text](ManhTu_commit.PNG)
 
 ---
 
 ## 6. Bonus Items (Optional)
-- [BONUS_COST_OPTIMIZATION]: (Description + Evidence)
-- [BONUS_AUDIT_LOGS]: (Description + Evidence)
-- [BONUS_CUSTOM_METRIC]: (Description + Evidence)
+- [BONUS_PII_RECURSIVE_SCRUBBING]: Đã triển khai bộ lọc PII quét đệ quy qua toàn bộ Object/List trong Log, đảm bảo không rò rỉ thông tin nhạy cảm ở bất kỳ tầng nào.
+- [BONUS_SLO_ALIGNMENT]: Các ngưỡng Alert được tinh chỉnh khớp hoàn toàn với SLO mục tiêu (2000ms Latency, 1% Error Rate).
 
 ---
 
